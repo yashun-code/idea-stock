@@ -30,7 +30,9 @@ python3 -m http.server 8642 --directory .
 
 ## フォルダ
 - `index.html` / `app.js` / `styles.css` / `manifest.json` / `sw.js` / `icon.svg` — アプリ本体
+- `memo-ai-icon-1024.png` — アプリアイコンの元画像（ユーザー作成、1024×1024）
+- `icon-180.png` / `icon-192.png` / `icon-512.png` — 元画像から縮小したアイコン（180=apple-touch-icon、192/512=manifest）
 - `mockups/` — 画面モックアップ（HTML、実装の元）
 
 ## 残課題
-- apple-touch-icon がSVG指定のため、iOSのホーム画面アイコンには反映されない（PNG化すれば解決）
+なし（apple-touch-iconのPNG化は対応済み）

@@ -42,10 +42,16 @@
     color: #1f2937;
   }
   textarea::placeholder { color: #9ca3af; }
+  .btn-row { display: flex; gap: 10px; margin-top: 12px; }
   .save-btn {
-    width: 100%; margin-top: 12px; padding: 15px; border: none; border-radius: 14px;
+    flex: 1; padding: 15px; border: none; border-radius: 14px;
     background: #6366f1; color: #fff; font-size: 16px; font-weight: 700; cursor: pointer;
   }
+  .mic-btn {
+    width: 58px; padding: 0; border: 2px solid #6366f1; border-radius: 14px;
+    background: #fff; font-size: 24px; cursor: pointer;
+  }
+  .mic-btn.rec { background: #fee2e2; border-color: #ef4444; animation: blink 1s infinite; }
   .hint { margin-top: 10px; font-size: 12px; color: #6b7280; text-align: center; }
   .section-label { font-size: 12px; font-weight: 700; color: #6b7280; margin: 22px 0 8px; letter-spacing: .05em; }
 
@@ -115,8 +121,11 @@
     <!-- 画面1: 書く -->
     <section class="screen active" id="write">
       <textarea placeholder="思いついたことをそのまま書く…&#10;&#10;整理はAIがやるので、殴り書きでOK"></textarea>
-      <button class="save-btn">保存する</button>
-      <p class="hint">保存すると、AIが自動でタイトル・カテゴリ・タグを付けます</p>
+      <div class="btn-row">
+        <button class="mic-btn" id="mic" title="音声入力">🎤</button>
+        <button class="save-btn">保存する</button>
+      </div>
+      <p class="hint">🎤で話した内容がそのまま入力欄に入ります／保存すると、AIが自動でタイトル・カテゴリ・タグを付けます</p>
 
       <p class="section-label">さっき保存したメモ</p>
       <div class="card">
@@ -193,6 +202,22 @@
 </div>
 
 <script>
+  // 音声入力のデモ: タップで録音中⇔停止を切り替え、話した風のテキストを入れる
+  const mic = document.getElementById('mic');
+  const ta = document.querySelector('textarea');
+  mic.onclick = () => {
+    mic.classList.toggle('rec');
+    if (mic.classList.contains('rec')) {
+      mic.textContent = '⏹';
+      ta.placeholder = '聞き取り中… 話してください';
+      setTimeout(() => {
+        if (mic.classList.contains('rec')) ta.value = 'えーっと 明細書の照合を自動化するツール 毎月やってるやつ あれをボタン一発にできないか';
+      }, 1200);
+    } else {
+      mic.textContent = '🎤';
+    }
+  };
+
   document.querySelectorAll('nav button').forEach(b => {
     b.onclick = () => {
       document.querySelectorAll('nav button').forEach(x => x.classList.remove('on'));

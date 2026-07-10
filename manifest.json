@@ -1,0 +1,19 @@
+{
+  "name": "idea-stock",
+  "short_name": "idea-stock",
+  "description": "思いつきをすぐ残して、AIが整理するアイデアメモ",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f8fa",
+  "theme_color": "#6366f1",
+  "lang": "ja",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

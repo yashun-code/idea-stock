@@ -10,13 +10,27 @@
 - **整理はAI任せ**: 保存時にClaude APIがタイトル・カテゴリ・タグを自動付与。
 - **後から見返す**: カテゴリ・タグで絞り込んで一覧できる。
 
-## 技術スタック（予定）
-- HTML/JS のPWA（単一ページ）
-- データ保存: ブラウザのlocalStorage
-- AI整理: Claude API（ブラウザから直接呼び出し、APIキーは設定画面でlocalStorageに保存）
+## 技術スタック
+- HTML/JS のPWA（単一ページ、ビルド不要）
+- データ保存: ブラウザのlocalStorage（キー: `ideastock_memos`, `ideastock_apikey`）
+- AI整理: Claude API（ブラウザから直接呼び出し、モデル claude-haiku-4-5、APIキーは設定画面でlocalStorageに保存）
+- 音声入力: Web Speech API（非対応端末はキーボードのマイク案内）
 
 ## 状態
-企画・モックアップ段階。実装未着手。
+実装済み・公開中。
+
+- 公開URL（スマホはこれを開く）: https://yashun-code.github.io/idea-stock/
+- リポジトリ: https://github.com/yashun-code/idea-stock
+
+## 起動方法（ローカル確認）
+```
+python3 -m http.server 8642 --directory .
+```
+→ http://localhost:8642/ を開く
 
 ## フォルダ
-- `mockups/` — 画面モックアップ（HTML）
+- `index.html` / `app.js` / `styles.css` / `manifest.json` / `sw.js` / `icon.svg` — アプリ本体
+- `mockups/` — 画面モックアップ（HTML、実装の元）
+
+## 残課題
+- apple-touch-icon がSVG指定のため、iOSのホーム画面アイコンには反映されない（PNG化すれば解決）

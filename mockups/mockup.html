@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>idea-stock モックアップ</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Hiragino Sans", sans-serif;
+    background: #e8eaf0;
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+  }
+  .phone {
+    width: 100%;
+    max-width: 420px;
+    background: #f7f8fa;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 0 24px rgba(0,0,0,.12);
+  }
+  header {
+    padding: 14px 18px 10px;
+    background: #fff;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  header h1 { font-size: 17px; color: #1f2937; }
+  header h1 span { color: #6366f1; }
+  .mock-badge { font-size: 10px; background: #fef3c7; color: #92400e; padding: 3px 8px; border-radius: 99px; }
+  main { flex: 1; overflow-y: auto; padding: 16px; padding-bottom: 80px; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* ---- 書く画面 ---- */
+  textarea {
+    width: 100%; height: 160px; border: 2px solid #c7d2fe; border-radius: 14px;
+    padding: 14px; font-size: 16px; font-family: inherit; resize: none; background: #fff;
+    color: #1f2937;
+  }
+  textarea::placeholder { color: #9ca3af; }
+  .save-btn {
+    width: 100%; margin-top: 12px; padding: 15px; border: none; border-radius: 14px;
+    background: #6366f1; color: #fff; font-size: 16px; font-weight: 700; cursor: pointer;
+  }
+  .hint { margin-top: 10px; font-size: 12px; color: #6b7280; text-align: center; }
+  .section-label { font-size: 12px; font-weight: 700; color: #6b7280; margin: 22px 0 8px; letter-spacing: .05em; }
+
+  /* ---- メモカード ---- */
+  .card {
+    background: #fff; border-radius: 14px; padding: 14px; margin-bottom: 10px;
+    border: 1px solid #e5e7eb;
+  }
+  .card .title { font-size: 14px; font-weight: 700; color: #1f2937; }
+  .card .title .ai { font-size: 10px; color: #6366f1; font-weight: 600; margin-left: 4px; }
+  .card .body { font-size: 13px; color: #4b5563; margin-top: 5px; line-height: 1.5; }
+  .card .meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; align-items: center; }
+  .tag { font-size: 11px; background: #eef2ff; color: #4f46e5; padding: 3px 9px; border-radius: 99px; }
+  .date { font-size: 11px; color: #9ca3af; margin-left: auto; }
+  .analyzing { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #6366f1; margin-top: 9px; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: #6366f1; animation: blink 1s infinite; }
+  @keyframes blink { 50% { opacity: .2; } }
+
+  /* ---- 一覧画面 ---- */
+  .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 6px; }
+  .chip {
+    flex-shrink: 0; font-size: 13px; padding: 7px 14px; border-radius: 99px;
+    background: #fff; border: 1px solid #d1d5db; color: #4b5563; cursor: pointer;
+  }
+  .chip.on { background: #6366f1; border-color: #6366f1; color: #fff; }
+  .search {
+    width: 100%; padding: 11px 14px; border: 1px solid #d1d5db; border-radius: 12px;
+    font-size: 14px; margin-bottom: 12px; background: #fff; font-family: inherit; color: #1f2937;
+  }
+
+  /* ---- 設定画面 ---- */
+  .setting-group { background: #fff; border-radius: 14px; border: 1px solid #e5e7eb; padding: 16px; margin-bottom: 14px; }
+  .setting-group h2 { font-size: 13px; color: #374151; margin-bottom: 10px; }
+  .setting-group input {
+    width: 100%; padding: 11px; border: 1px solid #d1d5db; border-radius: 10px;
+    font-size: 14px; font-family: inherit; color: #1f2937;
+  }
+  .setting-note { font-size: 11px; color: #6b7280; margin-top: 8px; line-height: 1.6; }
+  .sub-btn {
+    width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 10px;
+    background: #fff; color: #374151; font-size: 14px; cursor: pointer; font-family: inherit;
+  }
+  .ok { color: #059669; font-size: 12px; margin-top: 8px; }
+
+  /* ---- 下部ナビ ---- */
+  nav {
+    position: fixed; bottom: 0; width: 100%; max-width: 420px;
+    display: flex; background: #fff; border-top: 1px solid #e5e7eb;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  nav button {
+    flex: 1; padding: 10px 0 12px; border: none; background: none; cursor: pointer;
+    font-size: 11px; color: #9ca3af; font-family: inherit;
+  }
+  nav button .ico { display: block; font-size: 22px; margin-bottom: 2px; }
+  nav button.on { color: #6366f1; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <header>
+    <h1>💡 idea-<span>stock</span></h1>
+    <span class="mock-badge">モックアップ</span>
+  </header>
+
+  <main>
+    <!-- 画面1: 書く -->
+    <section class="screen active" id="write">
+      <textarea placeholder="思いついたことをそのまま書く…&#10;&#10;整理はAIがやるので、殴り書きでOK"></textarea>
+      <button class="save-btn">保存する</button>
+      <p class="hint">保存すると、AIが自動でタイトル・カテゴリ・タグを付けます</p>
+
+      <p class="section-label">さっき保存したメモ</p>
+      <div class="card">
+        <div class="body">音声入力でメモできたら運転中でも使えるかも。ハンズフリーで思いつきを逃さない</div>
+        <div class="analyzing"><span class="dot"></span> AIが整理中…</div>
+      </div>
+      <div class="card">
+        <div class="title">FX自動売買の損切りルール改善案 <span class="ai">✦AI</span></div>
+        <div class="body">損切り幅を固定pipsじゃなくてATRベースにしたらどうか。ボラが大きい日は広く…</div>
+        <div class="meta">
+          <span class="tag">FX</span><span class="tag">改善アイデア</span>
+          <span class="date">5分前</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 画面2: 一覧 -->
+    <section class="screen" id="list">
+      <input class="search" placeholder="🔍 メモを検索">
+      <div class="chips">
+        <span class="chip on">すべて</span>
+        <span class="chip">アプリのアイデア</span>
+        <span class="chip">FX</span>
+        <span class="chip">仕事</span>
+        <span class="chip">暮らし</span>
+      </div>
+      <div class="card">
+        <div class="title">うちなーぐち辞書に音声再生機能 <span class="ai">✦AI</span></div>
+        <div class="body">単語ごとにネイティブ発音を再生できるボタンがあると学習効率が上がりそう</div>
+        <div class="meta">
+          <span class="tag">アプリのアイデア</span><span class="tag">うちなーぐち</span>
+          <span class="date">7/9</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="title">FX自動売買の損切りルール改善案 <span class="ai">✦AI</span></div>
+        <div class="body">損切り幅を固定pipsじゃなくてATRベースにしたらどうか。ボラが大きい日は広く…</div>
+        <div class="meta">
+          <span class="tag">FX</span><span class="tag">改善アイデア</span>
+          <span class="date">7/10</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="title">朝のルーティンにAIニュース確認を組み込む <span class="ai">✦AI</span></div>
+        <div class="body">ai-news-digestを朝のコーヒーの時間に読む習慣にする。通知があるといい</div>
+        <div class="meta">
+          <span class="tag">暮らし</span><span class="tag">習慣化</span>
+          <span class="date">7/8</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 画面3: 設定 -->
+    <section class="screen" id="settings">
+      <div class="setting-group">
+        <h2>Claude APIキー</h2>
+        <input type="password" value="sk-ant-api03-••••••••••••">
+        <p class="ok">✓ 接続OK（最終確認: 今日 14:02）</p>
+        <p class="setting-note">キーはこのスマホの中（ブラウザ）にだけ保存されます。外部には送信されません。</p>
+      </div>
+      <div class="setting-group">
+        <h2>データ</h2>
+        <button class="sub-btn">メモをファイルに書き出す（バックアップ）</button>
+        <p class="setting-note">メモは全部このスマホの中に保存されています。現在 24件。</p>
+      </div>
+    </section>
+  </main>
+
+  <nav>
+    <button class="on" data-s="write"><span class="ico">✏️</span>書く</button>
+    <button data-s="list"><span class="ico">📚</span>一覧</button>
+    <button data-s="settings"><span class="ico">⚙️</span>設定</button>
+  </nav>
+</div>
+
+<script>
+  document.querySelectorAll('nav button').forEach(b => {
+    b.onclick = () => {
+      document.querySelectorAll('nav button').forEach(x => x.classList.remove('on'));
+      document.querySelectorAll('.screen').forEach(x => x.classList.remove('active'));
+      b.classList.add('on');
+      document.getElementById(b.dataset.s).classList.add('active');
+    };
+  });
+</script>
+</body>
+</html>

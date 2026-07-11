@@ -27,6 +27,7 @@
   let isRecording = false;
   let speechPrefix = '';
   let toastTimer = null;
+  let swipeState = null;
 
   function readMemos() {
     try {
@@ -73,13 +74,16 @@
     const unsorted = memo.status === 'unsorted' ? '<span class="status-badge">未整理</span>' : '';
     const analyzing = memo.status === 'analyzing' ? '<div class="analyzing"><span class="dot"></span> AIが整理中…</div>' : '';
     const retry = memo.status === 'unsorted' ? `<button class="retry-btn" type="button" data-retry-id="${escapeHtml(memo.id)}">再整理</button>` : '';
-    return `<article class="card" data-memo-id="${escapeHtml(memo.id)}">
+    return `<div class="card-wrap" data-wrap-id="${escapeHtml(memo.id)}">
+      <button class="delete-btn" type="button" data-delete-id="${escapeHtml(memo.id)}" aria-label="削除">🗑</button>
+      <article class="card" data-memo-id="${escapeHtml(memo.id)}">
       ${title}
       <div class="body">${escapeHtml(memo.text)}</div>
       <button class="copy-btn" type="button" data-copy-id="${escapeHtml(memo.id)}" title="コピー" aria-label="メモをコピー">📋</button>
       <div class="meta">${tagMarkup}${unsorted}<span class="date">${formatDate(memo.createdAt)}</span></div>
       ${analyzing}${retry}
-    </article>`;
+      </article>
+    </div>`;
   }
 
   function render() {
@@ -119,6 +123,19 @@
     } catch (_) {
       showToast('コピーできませんでした');
     }
+  }
+
+  function deleteMemo(id) {
+    const memos = readMemos();
+    writeMemos(memos.filter((memo) => memo.id !== id));
+    render();
+    showToast('🗑 メモを削除しました');
+  }
+
+  function closeOpenCards(except = null) {
+    document.querySelectorAll('.card-wrap.open').forEach((wrap) => {
+      if (wrap !== except) wrap.classList.remove('open');
+    });
   }
 
   function apiKey() {
@@ -290,16 +307,87 @@
     const button = event.target.closest('button[data-screen]');
     if (button) switchScreen(button.dataset.screen);
   });
+
+  document.addEventListener('pointerdown', (event) => {
+    const card = event.target.closest('.card');
+    if (!card || event.target.closest('button')) return;
+    const wrap = card.closest('.card-wrap');
+    if (!wrap) return;
+    swipeState = {
+      wrap,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      direction: null,
+      wasOpen: wrap.classList.contains('open')
+    };
+  });
+
+  document.addEventListener('pointermove', (event) => {
+    if (!swipeState || event.pointerId !== swipeState.pointerId) return;
+    const deltaX = event.clientX - swipeState.startX;
+    const deltaY = event.clientY - swipeState.startY;
+
+    if (!swipeState.direction) {
+      if (Math.abs(deltaX) < 8 && Math.abs(deltaY) < 8) return;
+      swipeState.direction = Math.abs(deltaX) > Math.abs(deltaY) ? 'horizontal' : 'vertical';
+    }
+    if (swipeState.direction !== 'horizontal') return;
+
+    event.preventDefault();
+    if (deltaX <= -40) {
+      closeOpenCards(swipeState.wrap);
+      swipeState.wrap.classList.add('open');
+    } else if (deltaX >= 40) {
+      swipeState.wrap.classList.remove('open');
+    }
+  }, { passive: false });
+
+  function finishSwipe(event, cancelled = false) {
+    if (!swipeState || event.pointerId !== swipeState.pointerId) return;
+    const { wrap, direction, wasOpen } = swipeState;
+    const deltaX = event.clientX - swipeState.startX;
+    swipeState = null;
+    if (cancelled) {
+      wrap.classList.toggle('open', wasOpen);
+      return;
+    }
+    if (direction !== 'horizontal') {
+      if (!direction && wasOpen) wrap.classList.remove('open');
+      return;
+    }
+    if (deltaX <= -40) {
+      if (wasOpen) wrap.classList.remove('open');
+      else {
+        closeOpenCards(wrap);
+        wrap.classList.add('open');
+      }
+    } else if (deltaX >= 40) {
+      wrap.classList.remove('open');
+    } else {
+      wrap.classList.toggle('open', wasOpen);
+    }
+  }
+
+  document.addEventListener('pointerup', (event) => finishSwipe(event));
+  document.addEventListener('pointercancel', (event) => finishSwipe(event, true));
+
   document.addEventListener('click', (event) => {
     const copyButton = event.target.closest('[data-copy-id]');
     const retryButton = event.target.closest('[data-retry-id]');
     const categoryButton = event.target.closest('[data-category]');
+    const deleteButton = event.target.closest('[data-delete-id]');
+    if (deleteButton) {
+      deleteMemo(deleteButton.dataset.deleteId);
+      return;
+    }
     if (copyButton) copyMemo(copyButton.dataset.copyId, copyButton);
     if (retryButton) organizeMemo(retryButton.dataset.retryId);
     if (categoryButton) {
       selectedCategory = categoryButton.dataset.category;
       render();
     }
+    if (!event.target.closest('.card-wrap')) closeOpenCards();
   });
   elements.saveButton.addEventListener('click', saveMemo);
   elements.micButton.addEventListener('click', toggleSpeechRecognition);

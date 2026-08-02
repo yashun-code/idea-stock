@@ -12,9 +12,25 @@
 
 ## 技術スタック
 - HTML/JS のPWA（単一ページ、ビルド不要）
-- データ保存: ブラウザのlocalStorage（キー: `ideastock_memos`, `ideastock_apikey`）
+- データ保存: Supabase（Postgres）。スマホ・PCなどログインした全端末で同じメモを共有する
+- ログイン: Supabase Auth（メール＋パスワード）。アプリ内に新規登録画面はなく、サーバー側でsign upを無効化済み。ユーザー追加はSupabaseダッシュボードから行う
 - AI整理: Claude API（ブラウザから直接呼び出し、モデル claude-haiku-4-5、APIキーは設定画面でlocalStorageに保存）
 - 音声入力: Web Speech API（非対応端末はキーボードのマイク案内）
+- オフライン非対応（圏外では保存できない。上部にオレンジの帯を出す）
+
+## Supabase
+
+- Project URL: `https://awqjhdihhwfijceurwya.supabase.co`
+- Publishable key: `sb_publishable_atCYSxQQ39TktHIuvAHPBg_YPKK5FcV`
+- この2つは公開前提の値なので `app.js` に直接埋め込んでいる。守りは鍵の秘匿ではなくRLSが担当する
+- `public.memos` テーブル: `id`(uuid,PK) / `user_id`(uuid, default `auth.uid()`) / `text` / `title` / `category` / `tags`(jsonb) / `status` / `created_at` / `updated_at`
+- RLS有効。select/insert/update/delete の4ポリシーがすべて `auth.uid() = user_id` の行だけを許可
+- **`service_role` キーとSecret keyはこのアプリでは一切使わない。コードにもドキュメントにも書かないこと**
+
+### localStorage に残るもの
+- `ideastock_apikey` — Claude APIキー（端末ごと。クラウドには置かない）
+- `ideastock_memos` — クラウド移行前の旧メモ。**移行後もバックアップとして残してある。消さないこと**
+- `ideastock_migrated` — 移行済みフラグ
 
 ## 状態
 実装済み・公開中。
@@ -32,7 +48,7 @@ python3 -m http.server 8642 --directory .
 - `index.html` / `app.js` / `styles.css` / `manifest.json` / `sw.js` / `icon.svg` — アプリ本体
 - `memo-ai-icon-1024.png` — アプリアイコンの元画像（ユーザー作成、1024×1024）
 - `icon-180.png` / `icon-192.png` / `icon-512.png` — 元画像から縮小したアイコン（180=apple-touch-icon、192/512=manifest）
-- `mockups/` — 画面モックアップ（HTML、実装の元）
+- `mockups/` — 画面モックアップ（HTML、実装の元）。`sync-mockup.html` はログイン・移行ダイアログ・設定画面の見た目の正本
 
 ## 残課題
-なし（apple-touch-iconのPNG化は対応済み）
+- 実機（スマホ実物）でのログインと端末間共有の確認が未実施

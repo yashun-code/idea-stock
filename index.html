@@ -14,11 +14,32 @@
 </head>
 <body>
   <div class="phone">
-    <header>
+    <section class="login-screen" id="login-screen" aria-labelledby="login-title">
+      <div class="login">
+        <div class="logo" aria-hidden="true">💡</div>
+        <h2 id="login-title">idea-<span>stock</span></h2>
+        <p class="lead">ログインすると、スマホとPCで<br>同じメモが見られます。</p>
+        <form class="fields" id="login-form">
+          <label for="login-email">メールアドレス</label>
+          <input id="login-email" type="email" autocomplete="username" required>
+          <label for="login-password">パスワード</label>
+          <input id="login-password" type="password" autocomplete="current-password" required>
+          <button class="save-btn" id="login-button" type="submit">ログイン</button>
+          <p class="login-error" id="login-error" role="alert"></p>
+        </form>
+        <p class="foot">このアプリは本人専用です。<br>アカウントの追加登録画面はありません。</p>
+      </div>
+    </section>
+
+    <header id="app-header" hidden>
       <h1>💡 idea-<span>stock</span></h1>
     </header>
 
-    <main>
+    <main id="app-main" hidden>
+      <div class="offline" id="offline-banner" role="status" hidden>
+        <span aria-hidden="true">📡</span><span><strong>電波がないと保存できません。</strong></span>
+      </div>
+
       <section class="screen active" id="write-screen" aria-labelledby="write-tab">
         <label class="sr-only" for="memo-input">アイデアメモ</label>
         <textarea id="memo-input" placeholder="思いついたことをそのまま書く…&#10;&#10;整理はAIがやるので、殴り書きでOK"></textarea>
@@ -41,29 +62,54 @@
 
       <section class="screen" id="settings-screen" aria-labelledby="settings-tab">
         <div class="setting-group">
+          <h2>アカウント</h2>
+          <div class="account-row">
+            <div class="avatar" aria-hidden="true">👤</div>
+            <div class="who">
+              <div class="mail" id="account-email"></div>
+              <div class="state">✓ ログイン中・同期オン</div>
+            </div>
+          </div>
+          <button class="logout-btn" id="logout-button" type="button">ログアウト</button>
+          <p class="setting-note">ログアウトすると、この端末からメモは見えなくなります（クラウド側のメモは消えません）。</p>
+        </div>
+        <div class="setting-group">
           <h2>Claude APIキー</h2>
           <label class="sr-only" for="api-key-input">Claude APIキー</label>
           <input id="api-key-input" type="password" placeholder="sk-ant-api..." autocomplete="off" spellcheck="false">
           <button class="sub-btn test-btn" id="connection-test" type="button">接続テスト</button>
           <p id="connection-status" class="connection-status" role="status"></p>
-          <p class="setting-note">キーはこのスマホの中（ブラウザ）にだけ保存されます。Claude API通信時のみAnthropicへ送信されます。</p>
+          <p class="setting-note">キーはこの端末の中（ブラウザ）にだけ保存されます。Claude API通信時のみAnthropicへ送信されます。<strong>PCでも使うときは、PC側でもう一度貼ってください。</strong></p>
         </div>
         <div class="setting-group">
           <h2>データ</h2>
+          <div class="sync-line" id="sync-status"><span class="sync-dot"></span><span>同期待ち</span></div>
           <button class="sub-btn" id="backup-button" type="button">メモをファイルに書き出す（バックアップ）</button>
-          <p class="setting-note" id="memo-count">メモは全部このスマホの中に保存されています。現在 0件。</p>
+          <p class="setting-note" id="memo-count">メモはクラウドに保存され、ログインした全ての端末で共有されます。現在 0件。</p>
         </div>
       </section>
     </main>
 
-    <nav aria-label="メインナビゲーション">
+    <nav id="app-nav" aria-label="メインナビゲーション" hidden>
       <button class="on" id="write-tab" data-screen="write" type="button"><span class="ico">✏️</span>書く</button>
       <button id="list-tab" data-screen="list" type="button"><span class="ico">📚</span>一覧</button>
       <button id="settings-tab" data-screen="settings" type="button"><span class="ico">⚙️</span>設定</button>
     </nav>
+
+    <div class="dim" id="migration-dialog" role="dialog" aria-modal="true" aria-labelledby="migration-title" hidden>
+      <div class="sheet">
+        <div class="ico-big" aria-hidden="true">📦</div>
+        <h3 id="migration-title">このスマホの中にメモがあります</h3>
+        <p>この端末に保存されている<span class="count" id="migration-count">0件</span>のメモを、クラウドに移しますか？<br>移すとPCからも見られるようになります。</p>
+        <button class="save-btn" id="migration-button" type="button">クラウドに移す</button>
+        <button class="later" id="migration-later" type="button">あとでにする</button>
+        <p class="migration-error" id="migration-error" role="alert"></p>
+      </div>
+    </div>
   </div>
 
   <div class="toast" id="toast" role="status">📋 クリップボードにコピーしました</div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js"></script>
 </body>
 </html>

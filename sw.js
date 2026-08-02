@@ -1,4 +1,4 @@
-const CACHE_NAME = 'idea-stock-v2';
+const CACHE_NAME = 'idea-stock-v3';
 const APP_SHELL = [
   './',
   './index.html',
@@ -23,6 +23,11 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-  if (url.hostname === 'api.anthropic.com' || event.request.method !== 'GET') return;
+  if (
+    url.hostname === 'api.anthropic.com'
+    || url.hostname.endsWith('.supabase.co')
+    || url.hostname === 'cdn.jsdelivr.net'
+    || event.request.method !== 'GET'
+  ) return;
   event.respondWith(caches.match(event.request).then((cached) => cached || fetch(event.request)));
 });

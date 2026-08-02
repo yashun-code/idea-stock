@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>idea-stock 端末間共有 モックアップ</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root { color: #1f2937; font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", sans-serif; }
+body { background: #e8eaf0; padding: 28px 20px 60px; }
+
+.page-title { max-width: 1360px; margin: 0 auto 6px; font-size: 20px; }
+.page-lead { max-width: 1360px; margin: 0 auto 26px; color: #6b7280; font-size: 13px; line-height: 1.7; }
+
+.row { display: flex; flex-wrap: wrap; gap: 26px; justify-content: center; max-width: 1360px; margin: 0 auto; }
+.col { width: 320px; }
+.caption { margin-bottom: 8px; font-size: 13px; font-weight: 700; }
+.caption em { display: block; margin-top: 3px; color: #6b7280; font-size: 11px; font-weight: 400; font-style: normal; line-height: 1.6; }
+
+.phone { position: relative; width: 100%; min-height: 600px; background: #f7f8fa; border-radius: 18px; box-shadow: 0 0 20px rgba(0,0,0,.12); display: flex; flex-direction: column; overflow: hidden; }
+header { padding: 14px 18px 10px; background: #fff; border-bottom: 1px solid #e5e7eb; }
+header h1 { color: #1f2937; font-size: 17px; }
+header h1 span { color: #6366f1; }
+main { flex: 1; padding: 16px 16px 76px; }
+
+button, input { font: inherit; }
+textarea, input { width: 100%; }
+
+.save-btn { width: 100%; padding: 15px; border: 0; border-radius: 14px; background: #6366f1; color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; }
+.sub-btn { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 10px; background: #fff; color: #374151; font-size: 14px; cursor: pointer; }
+.hint { margin-top: 10px; color: #6b7280; font-size: 12px; line-height: 1.6; text-align: center; }
+.setting-group { margin-bottom: 14px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 14px; background: #fff; }
+.setting-group h2 { margin-bottom: 10px; color: #374151; font-size: 13px; }
+.setting-group input { padding: 11px; border: 1px solid #d1d5db; border-radius: 10px; color: #1f2937; font-size: 14px; }
+.setting-note { margin-top: 8px; color: #6b7280; font-size: 11px; line-height: 1.6; }
+.section-label { margin: 22px 0 8px; color: #6b7280; font-size: 12px; font-weight: 700; letter-spacing: .05em; }
+
+nav { display: flex; border-top: 1px solid #e5e7eb; background: #fff; position: absolute; bottom: 0; left: 0; width: 100%; }
+nav button { flex: 1; padding: 10px 0 12px; border: 0; background: none; color: #9ca3af; font-size: 11px; cursor: pointer; }
+nav button .ico { display: block; margin-bottom: 2px; font-size: 22px; }
+nav button.on { color: #6366f1; font-weight: 700; }
+
+/* --- 1. ログイン画面 --- */
+.login { display: flex; flex-direction: column; justify-content: center; flex: 1; padding: 24px 22px; text-align: center; }
+.login .logo { font-size: 40px; }
+.login h2 { margin-top: 14px; font-size: 18px; }
+.login .lead { margin-top: 10px; color: #6b7280; font-size: 12.5px; line-height: 1.7; }
+.login .fields { margin-top: 22px; text-align: left; }
+.login label { display: block; margin-bottom: 5px; color: #6b7280; font-size: 11px; font-weight: 700; }
+.login input { margin-bottom: 12px; padding: 12px; border: 1px solid #d1d5db; border-radius: 10px; background: #fff; font-size: 15px; }
+.login .save-btn { margin-top: 4px; }
+.login .foot { margin-top: 18px; color: #9ca3af; font-size: 11px; line-height: 1.7; }
+
+/* --- 2. 移行ダイアログ --- */
+.dim { position: absolute; inset: 0; background: rgba(31,41,55,.45); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.sheet { width: 100%; padding: 20px 18px; border-radius: 16px; background: #fff; text-align: center; box-shadow: 0 12px 32px rgba(0,0,0,.2); }
+.sheet .ico-big { font-size: 34px; }
+.sheet h3 { margin-top: 10px; font-size: 15px; }
+.sheet p { margin-top: 10px; color: #6b7280; font-size: 12px; line-height: 1.7; }
+.sheet .count { color: #4f46e5; font-weight: 700; }
+.sheet .save-btn { margin-top: 16px; }
+.sheet .later { margin-top: 10px; padding: 10px; border: 0; background: none; color: #6b7280; font-size: 12.5px; cursor: pointer; text-decoration: underline; width: 100%; }
+
+/* --- 3. 設定画面 --- */
+.account-row { display: flex; align-items: center; gap: 10px; padding: 11px 12px; border: 1px solid #e5e7eb; border-radius: 10px; background: #f9fafb; }
+.avatar { width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%; background: #eef2ff; color: #4f46e5; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+.account-row .who { text-align: left; overflow: hidden; }
+.account-row .mail { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.account-row .state { margin-top: 2px; color: #059669; font-size: 11px; }
+.logout-btn { margin-top: 10px; width: 100%; padding: 11px; border: 1px solid #fecaca; border-radius: 10px; background: #fff; color: #dc2626; font-size: 13.5px; cursor: pointer; }
+.sync-line { display: flex; align-items: center; gap: 7px; margin-top: 10px; color: #059669; font-size: 12px; }
+.sync-line .dot { width: 7px; height: 7px; border-radius: 50%; background: #10b981; }
+
+.offline { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 14px; padding: 11px 13px; border: 1px solid #fde68a; border-radius: 12px; background: #fffbeb; color: #92400e; font-size: 12px; line-height: 1.6; }
+
+.note { max-width: 1360px; margin: 34px auto 0; padding: 18px 20px; border: 1px solid #e5e7eb; border-radius: 14px; background: #fff; font-size: 13px; line-height: 1.9; }
+.note h3 { margin-bottom: 8px; font-size: 14px; }
+.note ul { margin: 0 0 0 20px; color: #4b5563; }
+.note strong { color: #1f2937; }
+</style>
+</head>
+<body>
+
+<h1 class="page-title">idea-stock — スマホとPCでメモを共有する（モックアップ）</h1>
+<p class="page-lead">
+  追加・変更するのは下の3か所だけです。「書く」「一覧」の画面は今のまま変わりません。
+</p>
+
+<div class="row">
+
+  <!-- 1. ログイン画面 -->
+  <div class="col">
+    <p class="caption">① ログイン画面（新規）
+      <em>アプリを開いてログインしていないとき、最初に出る画面。1回ログインすれば、次からは自動で「書く」画面が開きます。</em>
+    </p>
+    <div class="phone">
+      <div class="login">
+        <div class="logo">💡</div>
+        <h2>idea-<span style="color:#6366f1">stock</span></h2>
+        <p class="lead">ログインすると、スマホとPCで<br>同じメモが見られます。</p>
+        <div class="fields">
+          <label for="m1">メールアドレス</label>
+          <input id="m1" type="email" value="user@example.com" readonly>
+          <label for="p1">パスワード</label>
+          <input id="p1" type="password" value="••••••••••" readonly>
+          <button class="save-btn" type="button">ログイン</button>
+        </div>
+        <p class="foot">このアプリは本人専用です。<br>アカウントの追加登録画面はありません。</p>
+      </div>
+      <nav>
+        <button class="on" type="button"><span class="ico">✏️</span>書く</button>
+        <button type="button"><span class="ico">📚</span>一覧</button>
+        <button type="button"><span class="ico">⚙️</span>設定</button>
+      </nav>
+    </div>
+  </div>
+
+  <!-- 2. 移行ダイアログ -->
+  <div class="col">
+    <p class="caption">② 引っ越しの確認（初回だけ）
+      <em>今スマホの中にあるメモをクラウドへ移すかを1回だけ聞きます。「あとで」を押しても、次に開いたときにまた出ます。移し終わったら二度と出ません。</em>
+    </p>
+    <div class="phone">
+      <header><h1>💡 idea-<span>stock</span></h1></header>
+      <main>
+        <div style="height:160px;border:2px solid #c7d2fe;border-radius:14px;background:#fff;padding:14px;color:#9ca3af;font-size:15px;line-height:1.5;">思いついたことをそのまま書く…</div>
+        <p class="section-label">さっき保存したメモ</p>
+      </main>
+      <div class="dim">
+        <div class="sheet">
+          <div class="ico-big">📦</div>
+          <h3>このスマホの中にメモがあります</h3>
+          <p>この端末に保存されている<span class="count">23件</span>のメモを、クラウドに移しますか？<br>移すとPCからも見られるようになります。</p>
+          <button class="save-btn" type="button">クラウドに移す</button>
+          <button class="later" type="button">あとでにする</button>
+        </div>
+      </div>
+      <nav>
+        <button class="on" type="button"><span class="ico">✏️</span>書く</button>
+        <button type="button"><span class="ico">📚</span>一覧</button>
+        <button type="button"><span class="ico">⚙️</span>設定</button>
+      </nav>
+    </div>
+  </div>
+
+  <!-- 3. 設定画面 -->
+  <div class="col">
+    <p class="caption">③ 設定画面（項目を追加・文言を変更）
+      <em>「アカウント」を追加。「データ」の説明を、クラウド保存に合わせて書き換えます。Claude APIキーは今までどおり端末ごとの設定です。</em>
+    </p>
+    <div class="phone">
+      <header><h1>💡 idea-<span>stock</span></h1></header>
+      <main>
+
+        <div class="offline">
+          <span>📡</span><span><strong>電波がないと保存できません。</strong>圏外のときは、この帯が画面の上に出ます。</span>
+        </div>
+
+        <div class="setting-group">
+          <h2>アカウント</h2>
+          <div class="account-row">
+            <div class="avatar">👤</div>
+            <div class="who">
+              <div class="mail">user@example.com</div>
+              <div class="state">✓ ログイン中・同期オン</div>
+            </div>
+          </div>
+          <button class="logout-btn" type="button">ログアウト</button>
+          <p class="setting-note">ログアウトすると、この端末からメモは見えなくなります（クラウド側のメモは消えません）。</p>
+        </div>
+
+        <div class="setting-group">
+          <h2>Claude APIキー</h2>
+          <input type="password" value="••••••••••••••••" readonly>
+          <button class="sub-btn" type="button" style="margin-top:10px;">接続テスト</button>
+          <p class="setting-note">キーはこの端末の中にだけ保存されます。<strong>PCでも使うときは、PC側でもう一度貼ってください。</strong></p>
+        </div>
+
+        <div class="setting-group">
+          <h2>データ</h2>
+          <div class="sync-line"><span class="dot"></span>同期済み（3分前）</div>
+          <button class="sub-btn" type="button" style="margin-top:10px;">メモをファイルに書き出す（バックアップ）</button>
+          <p class="setting-note">メモはクラウドに保存され、ログインした全ての端末で共有されます。現在 23件。</p>
+        </div>
+
+      </main>
+      <nav>
+        <button type="button"><span class="ico">✏️</span>書く</button>
+        <button type="button"><span class="ico">📚</span>一覧</button>
+        <button class="on" type="button"><span class="ico">⚙️</span>設定</button>
+      </nav>
+    </div>
+  </div>
+
+</div>
+
+<div class="note">
+  <h3>この画面以外で変わること（見た目には出ないところ）</h3>
+  <ul>
+    <li>メモの保存先が「その端末のブラウザの中」から<strong>クラウド（Supabase）</strong>に変わります。スマホで書けばPCに、PCで書けばスマホに出ます。</li>
+    <li>同期のタイミングは<strong>アプリを開いたとき</strong>と<strong>保存・削除したとき</strong>。数分ごとの自動更新はしません（開き直せば最新になります）。</li>
+    <li>アカウントは<strong>あなたの1つだけ</strong>を用意します。アプリ内に新規登録画面は作りません（他人が勝手に作れないようにするため）。</li>
+    <li>今回は<strong>オフライン対応なし</strong>。圏外だと保存できず、上のオレンジの帯が出ます。</li>
+  </ul>
+</div>
+
+</body>
+</html>

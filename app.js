@@ -1,12 +1,26 @@
 (() => {
   'use strict';
 
+  const SUPABASE_URL = 'https://awqjhdihhwfijceurwya.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_atCYSxQQ39TktHIuvAHPBg_YPKK5FcV';
   const MEMOS_KEY = 'ideastock_memos';
+  const MIGRATED_KEY = 'ideastock_migrated';
   const API_KEY_STORAGE = 'ideastock_apikey';
   const API_URL = 'https://api.anthropic.com/v1/messages';
   const MODEL = 'claude-haiku-4-5-20251001';
+  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   const elements = {
+    loginScreen: document.getElementById('login-screen'),
+    loginForm: document.getElementById('login-form'),
+    loginEmail: document.getElementById('login-email'),
+    loginPassword: document.getElementById('login-password'),
+    loginButton: document.getElementById('login-button'),
+    loginError: document.getElementById('login-error'),
+    appHeader: document.getElementById('app-header'),
+    appMain: document.getElementById('app-main'),
+    appNav: document.getElementById('app-nav'),
+    offlineBanner: document.getElementById('offline-banner'),
     memoInput: document.getElementById('memo-input'),
     saveButton: document.getElementById('save-button'),
     micButton: document.getElementById('mic-button'),
@@ -19,7 +33,24 @@
     connectionStatus: document.getElementById('connection-status'),
     backupButton: document.getElementById('backup-button'),
     memoCount: document.getElementById('memo-count'),
+    accountEmail: document.getElementById('account-email'),
+    logoutButton: document.getElementById('logout-button'),
+    syncStatus: document.getElementById('sync-status'),
+    migrationDialog: document.getElementById('migration-dialog'),
+    migrationCount: document.getElementById('migration-count'),
+    migrationButton: document.getElementById('migration-button'),
+    migrationLater: document.getElementById('migration-later'),
+    migrationError: document.getElementById('migration-error'),
     toast: document.getElementById('toast')
+  };
+
+  const state = {
+    memos: [],
+    session: null,
+    activeUserId: null,
+    lastSyncAt: null,
+    loadingMemos: false,
+    offline: !navigator.onLine
   };
 
   let selectedCategory = 'すべて';
@@ -29,7 +60,7 @@
   let toastTimer = null;
   let swipeState = null;
 
-  function readMemos() {
+  function readLegacyMemos() {
     try {
       const stored = JSON.parse(localStorage.getItem(MEMOS_KEY) || '[]');
       return Array.isArray(stored) ? stored.filter((memo) => memo && typeof memo.text === 'string') : [];
@@ -38,8 +69,50 @@
     }
   }
 
-  function writeMemos(memos) {
-    localStorage.setItem(MEMOS_KEY, JSON.stringify(memos));
+  function rowToMemo(row) {
+    return {
+      id: row.id,
+      text: row.text || '',
+      title: row.title || '',
+      category: row.category || '',
+      tags: Array.isArray(row.tags) ? row.tags : [],
+      status: row.status || 'unsorted',
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    };
+  }
+
+  function memoToRow(memo) {
+    return {
+      id: memo.id,
+      text: memo.text || '',
+      title: memo.title || '',
+      category: memo.category || '',
+      tags: Array.isArray(memo.tags) ? memo.tags : [],
+      status: memo.status || 'unsorted',
+      created_at: memo.createdAt,
+      updated_at: memo.updatedAt || memo.createdAt
+    };
+  }
+
+  function isNetworkError(error) {
+    const message = String(error?.message || error || '').toLowerCase();
+    return !navigator.onLine || message.includes('failed to fetch') || message.includes('network') || message.includes('load failed');
+  }
+
+  function setOffline(offline) {
+    state.offline = offline;
+    elements.offlineBanner.hidden = !offline;
+  }
+
+  function handleSupabaseError(error) {
+    if (isNetworkError(error)) setOffline(true);
+  }
+
+  function markSynced() {
+    state.lastSyncAt = new Date().toISOString();
+    if (navigator.onLine) setOffline(false);
+    renderSyncStatus();
   }
 
   function sortNewest(memos) {
@@ -47,7 +120,7 @@
   }
 
   function makeId() {
-    return window.crypto && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    return crypto.randomUUID();
   }
 
   function formatDate(isoDate) {
@@ -59,6 +132,11 @@
     if (elapsed >= 0 && elapsed < 60 * 60 * 1000) return `${Math.floor(elapsed / (60 * 1000))}分前`;
     if (elapsed >= 0 && elapsed < 24 * 60 * 60 * 1000) return `${Math.floor(elapsed / (60 * 60 * 1000))}時間前`;
     return `${date.getMonth() + 1}/${date.getDate()}`;
+  }
+
+  function renderSyncStatus() {
+    const label = elements.syncStatus.querySelector('span:last-child');
+    label.textContent = state.lastSyncAt ? `同期済み（${formatDate(state.lastSyncAt)}）` : '同期待ち';
   }
 
   function escapeHtml(value) {
@@ -87,11 +165,13 @@
   }
 
   function render() {
-    const memos = sortNewest(readMemos());
+    const memos = sortNewest(state.memos);
     const categories = [...new Set(memos.map((memo) => memo.category).filter(Boolean))];
     if (selectedCategory !== 'すべて' && !categories.includes(selectedCategory)) selectedCategory = 'すべて';
 
-    elements.recentMemos.innerHTML = memos.slice(0, 5).map(memoCard).join('') || '<p class="empty">まだメモはありません</p>';
+    elements.recentMemos.innerHTML = state.loadingMemos
+      ? '<p class="empty">読み込み中…</p>'
+      : memos.slice(0, 5).map(memoCard).join('') || '<p class="empty">まだメモはありません</p>';
     elements.categoryChips.innerHTML = ['すべて', ...categories].map((category) => (
       `<button class="chip ${category === selectedCategory ? 'on' : ''}" type="button" data-category="${escapeHtml(category)}">${escapeHtml(category)}</button>`
     )).join('');
@@ -101,8 +181,11 @@
       const searchable = [memo.text, memo.title, ...(Array.isArray(memo.tags) ? memo.tags : [])].join(' ').toLocaleLowerCase('ja-JP');
       return (selectedCategory === 'すべて' || memo.category === selectedCategory) && (!query || searchable.includes(query));
     });
-    elements.memoList.innerHTML = visibleMemos.map(memoCard).join('') || '<p class="empty">該当するメモはありません</p>';
-    elements.memoCount.textContent = `メモは全部このスマホの中に保存されています。現在 ${memos.length}件。`;
+    elements.memoList.innerHTML = state.loadingMemos
+      ? '<p class="empty">読み込み中…</p>'
+      : visibleMemos.map(memoCard).join('') || '<p class="empty">該当するメモはありません</p>';
+    elements.memoCount.textContent = `メモはクラウドに保存され、ログインした全ての端末で共有されます。現在 ${memos.length}件。`;
+    renderSyncStatus();
   }
 
   function showToast(message = '📋 クリップボードにコピーしました') {
@@ -113,7 +196,7 @@
   }
 
   async function copyMemo(id, button) {
-    const memo = readMemos().find((item) => item.id === id);
+    const memo = state.memos.find((item) => item.id === id);
     if (!memo) return;
     try {
       await navigator.clipboard.writeText(memo.text);
@@ -125,11 +208,18 @@
     }
   }
 
-  function deleteMemo(id) {
-    const memos = readMemos();
-    writeMemos(memos.filter((memo) => memo.id !== id));
-    render();
-    showToast('🗑 メモを削除しました');
+  async function deleteMemo(id) {
+    try {
+      const { error } = await db.from('memos').delete().eq('id', id);
+      if (error) throw error;
+      state.memos = state.memos.filter((memo) => memo.id !== id);
+      markSynced();
+      render();
+      showToast('🗑 メモを削除しました');
+    } catch (error) {
+      handleSupabaseError(error);
+      showToast(`削除できませんでした: ${error.message}`);
+    }
   }
 
   function closeOpenCards(except = null) {
@@ -179,30 +269,58 @@
     };
   }
 
+  async function updateMemoOrganization(memo) {
+    const { error } = await db.from('memos').update({
+      title: memo.title,
+      category: memo.category,
+      tags: memo.tags,
+      status: memo.status,
+      updated_at: memo.updatedAt
+    }).eq('id', memo.id);
+    if (error) throw error;
+    markSynced();
+  }
+
   async function organizeMemo(id) {
-    const memos = readMemos();
-    const memo = memos.find((item) => item.id === id);
+    const memo = state.memos.find((item) => item.id === id);
     if (!memo) return;
 
     memo.status = 'analyzing';
-    writeMemos(memos);
     render();
 
+    let organized;
     try {
-      const categories = [...new Set(memos.map((item) => item.category).filter(Boolean))];
+      const categories = [...new Set(state.memos.map((item) => item.category).filter(Boolean))];
       const result = await callClaude(`次のアイデアメモを整理してください。既存カテゴリ: ${categories.length ? categories.join('、') : 'なし'}。\n\n本文: ${memo.text}\n\n日本語で、title（15字以内）、category（既存カテゴリに合うものがあれば必ず再利用。なければ新設）、tags（1〜3個）のJSONオブジェクトだけを返してください。説明やMarkdownは不要です。`);
-      const organized = parseAiResult(result);
-      const latestMemos = readMemos();
-      const latestMemo = latestMemos.find((item) => item.id === id);
-      if (!latestMemo) return;
-      Object.assign(latestMemo, organized, { status: 'done' });
-      writeMemos(latestMemos);
+      organized = parseAiResult(result);
     } catch (_) {
-      const latestMemos = readMemos();
-      const latestMemo = latestMemos.find((item) => item.id === id);
+      const latestMemo = state.memos.find((item) => item.id === id);
       if (latestMemo) {
         latestMemo.status = 'unsorted';
-        writeMemos(latestMemos);
+        latestMemo.updatedAt = new Date().toISOString();
+        try {
+          await updateMemoOrganization(latestMemo);
+        } catch (error) {
+          handleSupabaseError(error);
+        }
+      }
+      render();
+      return;
+    }
+
+    const latestMemo = state.memos.find((item) => item.id === id);
+    if (!latestMemo) return;
+    Object.assign(latestMemo, organized, { status: 'done', updatedAt: new Date().toISOString() });
+    try {
+      await updateMemoOrganization(latestMemo);
+    } catch (error) {
+      handleSupabaseError(error);
+      latestMemo.status = 'unsorted';
+      latestMemo.updatedAt = new Date().toISOString();
+      try {
+        await updateMemoOrganization(latestMemo);
+      } catch (statusError) {
+        handleSupabaseError(statusError);
       }
     }
     render();
@@ -214,13 +332,27 @@
       elements.memoInput.focus();
       return;
     }
-    const memos = readMemos();
-    const memo = { id: makeId(), text, createdAt: new Date().toISOString(), title: '', category: '', tags: [], status: 'analyzing' };
-    memos.push(memo);
-    writeMemos(memos);
-    elements.memoInput.value = '';
-    render();
-    await organizeMemo(memo.id);
+    const now = new Date().toISOString();
+    const memo = { id: makeId(), text, createdAt: now, updatedAt: now, title: '', category: '', tags: [], status: 'analyzing' };
+    elements.saveButton.disabled = true;
+    elements.saveButton.textContent = '保存中…';
+    let saved = false;
+    try {
+      const { error } = await db.from('memos').insert(memoToRow(memo));
+      if (error) throw error;
+      state.memos.unshift(memo);
+      elements.memoInput.value = '';
+      markSynced();
+      render();
+      saved = true;
+    } catch (error) {
+      handleSupabaseError(error);
+      showToast(`保存できませんでした: ${error.message}`);
+    } finally {
+      elements.saveButton.disabled = false;
+      elements.saveButton.textContent = '保存する';
+    }
+    if (saved) await organizeMemo(memo.id);
   }
 
   function setRecording(recording) {
@@ -283,7 +415,7 @@
   }
 
   function downloadBackup() {
-    const data = JSON.stringify(sortNewest(readMemos()), null, 2);
+    const data = JSON.stringify(sortNewest(state.memos), null, 2);
     const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -297,13 +429,150 @@
     URL.revokeObjectURL(url);
   }
 
+  async function loadMemos() {
+    const userId = state.activeUserId;
+    state.loadingMemos = true;
+    render();
+    try {
+      const { data, error } = await db.from('memos').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      if (state.activeUserId !== userId) return false;
+      state.memos = (data || []).map(rowToMemo);
+      markSynced();
+      return true;
+    } catch (error) {
+      handleSupabaseError(error);
+      showToast(`メモを読み込めませんでした: ${error.message}`);
+      return false;
+    } finally {
+      if (state.activeUserId === userId) {
+        state.loadingMemos = false;
+        render();
+      }
+    }
+  }
+
+  function closeMigrationDialog() {
+    elements.migrationDialog.hidden = true;
+    elements.migrationError.textContent = '';
+  }
+
+  function showMigrationIfNeeded() {
+    const legacyMemos = readLegacyMemos();
+    if (legacyMemos.length === 0 || localStorage.getItem(MIGRATED_KEY) === 'true') return;
+    elements.migrationCount.textContent = `${legacyMemos.length}件`;
+    elements.migrationError.textContent = '';
+    elements.migrationDialog.hidden = false;
+  }
+
+  async function migrateMemos() {
+    const legacyMemos = readLegacyMemos();
+    if (legacyMemos.length === 0) {
+      closeMigrationDialog();
+      return;
+    }
+    elements.migrationButton.disabled = true;
+    elements.migrationLater.disabled = true;
+    elements.migrationButton.textContent = '移行中…';
+    elements.migrationError.textContent = '';
+    try {
+      const { error } = await db.from('memos').insert(legacyMemos.map(memoToRow));
+      if (error) throw error;
+      localStorage.setItem(MIGRATED_KEY, 'true');
+      markSynced();
+      closeMigrationDialog();
+      await loadMemos();
+      showToast('クラウドに移しました');
+    } catch (error) {
+      handleSupabaseError(error);
+      elements.migrationError.textContent = `移行できませんでした: ${error.message}`;
+    } finally {
+      elements.migrationButton.disabled = false;
+      elements.migrationLater.disabled = false;
+      elements.migrationButton.textContent = 'クラウドに移す';
+    }
+  }
+
+  function showLoggedOut() {
+    state.session = null;
+    state.activeUserId = null;
+    state.memos = [];
+    state.lastSyncAt = null;
+    state.loadingMemos = false;
+    closeMigrationDialog();
+    elements.loginScreen.hidden = false;
+    elements.appHeader.hidden = true;
+    elements.appMain.hidden = true;
+    elements.appNav.hidden = true;
+    elements.accountEmail.textContent = '';
+    render();
+  }
+
+  async function showLoggedIn(session) {
+    state.session = session;
+    elements.loginScreen.hidden = true;
+    elements.appHeader.hidden = false;
+    elements.appMain.hidden = false;
+    elements.appNav.hidden = false;
+    elements.accountEmail.textContent = session.user.email || '';
+    setOffline(state.offline || !navigator.onLine);
+
+    if (state.activeUserId === session.user.id) return;
+    switchScreen('write');
+    state.activeUserId = session.user.id;
+    state.memos = [];
+    state.lastSyncAt = null;
+    const loaded = await loadMemos();
+    if (loaded && state.activeUserId === session.user.id) showMigrationIfNeeded();
+  }
+
+  async function submitLogin(event) {
+    event.preventDefault();
+    elements.loginError.textContent = '';
+    elements.loginButton.disabled = true;
+    elements.loginButton.textContent = 'ログイン中…';
+    try {
+      const { data, error } = await db.auth.signInWithPassword({
+        email: elements.loginEmail.value.trim(),
+        password: elements.loginPassword.value
+      });
+      if (error) throw error;
+      if (data.session) await showLoggedIn(data.session);
+      elements.loginPassword.value = '';
+    } catch (error) {
+      handleSupabaseError(error);
+      elements.loginError.textContent = error.message === 'Invalid login credentials'
+        ? 'メールアドレスかパスワードが違います'
+        : error.message;
+    } finally {
+      elements.loginButton.disabled = false;
+      elements.loginButton.textContent = 'ログイン';
+    }
+  }
+
+  async function logout() {
+    elements.logoutButton.disabled = true;
+    elements.logoutButton.textContent = 'ログアウト中…';
+    try {
+      const { error } = await db.auth.signOut();
+      if (error) throw error;
+      showLoggedOut();
+    } catch (error) {
+      handleSupabaseError(error);
+      showToast(`ログアウトできませんでした: ${error.message}`);
+    } finally {
+      elements.logoutButton.disabled = false;
+      elements.logoutButton.textContent = 'ログアウト';
+    }
+  }
+
   function switchScreen(name) {
     document.querySelectorAll('.screen').forEach((screen) => screen.classList.toggle('active', screen.id === `${name}-screen`));
     document.querySelectorAll('nav button').forEach((button) => button.classList.toggle('on', button.dataset.screen === name));
-    if (name === 'list') render();
+    if (name === 'list' || name === 'settings') render();
   }
 
-  document.querySelector('nav').addEventListener('click', (event) => {
+  elements.appNav.addEventListener('click', (event) => {
     const button = event.target.closest('button[data-screen]');
     if (button) switchScreen(button.dataset.screen);
   });
@@ -378,7 +647,7 @@
     const categoryButton = event.target.closest('[data-category]');
     const deleteButton = event.target.closest('[data-delete-id]');
     if (deleteButton) {
-      deleteMemo(deleteButton.dataset.deleteId);
+      void deleteMemo(deleteButton.dataset.deleteId);
       return;
     }
     if (copyButton) copyMemo(copyButton.dataset.copyId, copyButton);
@@ -396,7 +665,36 @@
   elements.apiKeyInput.addEventListener('input', () => localStorage.setItem(API_KEY_STORAGE, elements.apiKeyInput.value.trim()));
   elements.connectionTest.addEventListener('click', testConnection);
   elements.backupButton.addEventListener('click', downloadBackup);
+  elements.loginForm.addEventListener('submit', submitLogin);
+  elements.logoutButton.addEventListener('click', logout);
+  elements.migrationButton.addEventListener('click', migrateMemos);
+  elements.migrationLater.addEventListener('click', closeMigrationDialog);
 
-  render();
+  window.addEventListener('offline', () => setOffline(true));
+  window.addEventListener('online', () => setOffline(false));
+
+  db.auth.onAuthStateChange((_event, session) => {
+    window.setTimeout(() => {
+      if (session) void showLoggedIn(session);
+      else showLoggedOut();
+    }, 0);
+  });
+
+  async function initializeAuth() {
+    try {
+      const { data, error } = await db.auth.getSession();
+      if (error) throw error;
+      if (data.session) await showLoggedIn(data.session);
+      else showLoggedOut();
+    } catch (error) {
+      handleSupabaseError(error);
+      showLoggedOut();
+      elements.loginError.textContent = error.message;
+    }
+  }
+
+  setOffline(!navigator.onLine);
+  void initializeAuth();
+  window.setInterval(renderSyncStatus, 60 * 1000);
   if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
 })();

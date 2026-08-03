@@ -1,4 +1,4 @@
-const CACHE_NAME = 'idea-stock-v3';
+const CACHE_NAME = 'idea-stock-v4';
 const APP_SHELL = [
   './',
   './index.html',
